@@ -3,7 +3,7 @@
 Profile=("${HOME}"/.mozilla/firefox/${1:-*.default})
 BackupPath="${2:-./backup/ff}"
 Suffix="${3:-"$(date --iso-8601=second)"}"
-http://kb.mozillazine.org/Profile_folder_-_Firefox
+#http://kb.mozillazine.org/Profile_folder_-_Firefox
 Files=(
 	"cert_override.txt"
 	"places.sqlite"
