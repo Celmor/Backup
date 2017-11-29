@@ -1,5 +1,5 @@
 #!/bin/bash
-elif [ "$1" == "-h" ]; then
+if [ "$1" == "-h" ]; then
 	printf "Usage: %s FILE...\\n" "$0"
 	exit 0
 fi
