@@ -13,7 +13,6 @@ Suffix="${4:-"$(date --iso-8601=second)"}"
 printf "BackupPath = %s\\n" "$BackupPath"
 printf "RemoteShell = %s\\n" "$RemoteShell"
 printf "ExcludeFiles = %s\\n" "$ExcludeFiles"
-printf "Suffix = %s\\n" "$Suffix"
 read -r -n 1 -p "Do you want to continue? [Y/n] " ans || { echo; exit; } && echo
 case "$ans" in
     [yY][eE][sS]|[yY]|"")
@@ -24,4 +23,4 @@ case "$ans" in
         ;;
 esac
 
-rsync -e "$RemoteShell" -i -ahxHAX --delete --delete-excluded --exclude-from=${ExcludeFiles} / ${BackupPath}/ | tee -a ~/new/log/rsync.root-\>backup."$Suffix".log
+rsync -e "$RemoteShell" -i -ahxHAX --delete --delete-excluded --exclude-from=${ExcludeFiles} / ${BackupPath}/
