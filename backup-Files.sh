@@ -1,15 +1,47 @@
 #!/bin/bash
-if [ "$1" == "-h" ]; then
-	printf "Usage: %s BACKUPPATH REMOTESHELL FILE...\\n" "$0"
+
+Print-Usage(){
+	printf %s\\n "Backup each input path to BackupPath using rsync with --delete."
+	printf "Usage: %s [-v] [-c] [-p <BackupPath>] [-e RemoteShell] PATH...\\n" "$0" >&2
 	exit 0
-fi
-[ "$1" = "" ] && BackupPath="root@10.0.1.21:/Data/Backup/daily" || BackupPath="$1"
-[ "$2" = "" ] && RemoteShell="ssh" || BackupPath="$2"
+}
 
-shift 2
-printf "BackupPath = %s\\n" "$BackupPath"
-printf "RemoteShell = %s\\n" "$RemoteShell"
+BackupPath="root@10.0.1.21:/Data/Backup/daily"
+RemoteShell="ssh"
+while getopts ":hvcp:e:" arg; do
+  case $arg in
+    h)
+      Print-Usage
+      ;;
+    p)
+      BackupPath=${OPTARG}
+      ;;
+    e)
+      RemoteShell=${OPTARG}
+      ;;
+    v)
+      VERBOSE=1
+      ;;
+    c)
+      CONTINUE=1
+      ;;
+    \?)
+      Print-Usage
+      ;;
+  esac
+done
+shift $((OPTIND-1))
 
+Write-Verbose(){
+	[ "$VERBOSE" -eq 1 ] && echo "$@"
+}
+Write-Verbose "INFO: BackupPath = $BackupPath"
+Write-Verbose "INFO: RemoteShell = $RemoteShell"
+
+RETURN=0
 for file in "$@"; do
 	rsync -e "$RemoteShell" -i -ahxHAX --delete "$file" "$BackupPath"/"$file"
+	RETURN=$?
+	[ "$RETURN" -ne 0 ] && [ "$FORCE" -ne 1 ] && exit "$RETURN"
 done
+exit "$RETURN"
