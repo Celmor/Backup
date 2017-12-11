@@ -1,7 +1,9 @@
 #!/bin/bash
+#
 
 Print-Usage(){
-	printf %s\\n "Backup each input path to BackupPath using rsync with --delete."
+	printf %s\\n "Backup each input folde ror file, overwriting if existing \
+ to BackupPath/ using rsync with --delete."
 	printf "Usage: %s [-v] [-c] [-p <BackupPath>] [-e RemoteShell] PATH...\\n" "$0" >&2
 	exit 0
 }
