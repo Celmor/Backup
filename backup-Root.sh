@@ -6,10 +6,10 @@ elif [ "$EUID" -ne 0 ]; then
 	printf "Error: This script must be run as root\\n"
 	exit -1
 fi
+
 BackupPath="${1:-"root@10.0.1.21:/Data/Backup/Linux/NVMeRoot"}"
 RemoteShell="${2:-ssh}"
 ExcludeFiles="${3:-"$(which "$0").txt"}"
-Suffix="${4:-"$(date --iso-8601=second)"}"
 printf "BackupPath = %s\\n" "$BackupPath"
 printf "RemoteShell = %s\\n" "$RemoteShell"
 printf "ExcludeFiles = %s\\n" "$ExcludeFiles"
