@@ -1,15 +1,37 @@
 #!/bin/bash
-if [ "$1" == "-h" ]; then
-	printf "Usage: %s [BackupPath] [RemoteShell] [ExcludeFiles] [Suffix]\\n" "$0"
-	exit 0
-elif [ "$EUID" -ne 0 ]; then
+if [ "$EUID" -ne 0 ]; then
 	printf "Error: This script must be run as root\\n"
 	exit -1
 fi
+Print-Usage(){
+	printf "Usage: %s [BackupPath] [RemoteShell] [ExcludeFiles] [Suffix]\\n" "$0"
+	exit 0
+}
 
-BackupPath="${1:-"root@10.0.1.21:/Data/Backup/Linux/NVMeRoot"}"
-RemoteShell="${2:-ssh}"
-ExcludeFiles="${3:-"$(which "$0").txt"}"
+BackupPath="root@10.0.1.21:/Data/Backup/Linux/NVMeRoot"
+RemoteShell="ssh"
+ExcludeFiles="$(which "$0").txt"
+while getopts ":hvp:e:f:" arg; do
+  case $arg in
+    h)
+      Print-Usage
+      ;;
+    p)
+      BackupPath=${OPTARG}
+      ;;
+    e)
+      RemoteShell=${OPTARG}
+      ;;
+    f)
+      ExcludeFiles=${OPTARG}
+      ;;
+    \?)
+      Print-Usage
+      ;;
+  esac
+done
+shift $((OPTIND-1))
+
 printf "BackupPath = %s\\n" "$BackupPath"
 printf "RemoteShell = %s\\n" "$RemoteShell"
 printf "ExcludeFiles = %s\\n" "$ExcludeFiles"
