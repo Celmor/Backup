@@ -9,5 +9,13 @@ type="$3"
 
 cd "$SearchDir"
 printf %s\\n "searching files..."
-files=(); while read -rd '' file && read -rn1 && read -r type; do if [[ $type = ?(;*) ]]; then files+=("$file"); fi; done < <(find . -type f -exec file -0i {} +); declare -p files
+#awk 2018-01-27T23:02:13.843 <geirha>
+files=()
+while read -rd '' file \
+&& read -rn1 \
+&& read -r type; do
+	if [[ $type = ?(;*) ]]; then
+		files+=("$file")
+	fi
+done < <(find . -type f -exec file -0i {} +)
 tar -cJf "$archive" -T <(printf %s\\n "${files[@]}")
