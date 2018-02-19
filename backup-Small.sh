@@ -25,4 +25,4 @@ while IFS= read -rd '' item; do
 	fi
 done < <(cd "$SearchDir" && find ./* -iname "$wildcard" ! -name "$archive" -print0 2>/dev/null)
 printf %s\\n "Archiving Items..." >&2
-tar -cf "$archive" -C "$SearchDir" --null -T <(printf %s\\0 "${items[@]}")
+tar -cf "$archive" -C "$SearchDir" --null -T <(printf %s\\0 "${items[@]//\\/\\\\}")
