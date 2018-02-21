@@ -10,6 +10,6 @@ size="${4:-1024}"
 	exit -1
 }
 printf %s\\n "Searching Items..." >&2
-readarray items < <(find / -xdev -mindepth 2 -path /home\* -prune -o -path /Data\* -prune -o -path /var/cache\* -prune -o -type f -print)
+readarray items < <(find / -xdev -mindepth 2 -path /home\* -prune -o -path /Data\* -prune -o -path /var/cache\* -prune -o -type f ! -name "$archive" -print)
 printf %s\\n "Archiving Items..." >&2
-tar -cf "$archive" -C "$SearchDir" -T <(printf %s\\n "${items[@]}")
+tar -cf "$archive" -C "$SearchDir" --null -T <(printf %s\\0 "${items[@]//\\/\\\\}")
