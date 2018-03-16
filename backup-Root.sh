@@ -13,6 +13,7 @@ if [ -f "$(which "$0").txt" ]; then
 	ExcludeFiles="$(which "$0").txt"
 fi
 BackupPath="/Data/Backup/Linux/NVMeRoot" #defines default BackupPath
+source=/
 
 while getopts ":p:e:f:l:" arg; do
   case $arg in
@@ -26,8 +27,12 @@ while getopts ":p:e:f:l:" arg; do
       ExcludeFiles=${OPTARG}
       ;;
 	l)
-	  lvm="$(df --output=source / | tail -1)"
-	  lvcreate -L 5G --snapshot -n "$(basename "$lvm")-$(date +%F-%0H-%0M)" "$lvm" || exit 1
+	  lvmSource="$(df --output=source / | tail -1)"
+	  lvm="$(basename "$lvm")-$(date +%F-%0H-%0M)"
+	  source="$(mktemp -d /mntXXX)"
+	  lvcreate -L 5G --snapshot -n "$lvm" "$lvmSource" \
+	  && mount /dev/mapper/"$lvm" "$source" \
+	  || exit 1
 	  ;;
     \?)
       Print-Usage
@@ -54,5 +59,6 @@ esac
 
 rsync ${RemoteShell:+-e "$RemoteShell"} -i -ahxHAX --delete ${ExcludeFiles:+"--exclude-from=$ExcludeFiles"} / "$BackupPath"/
 if test "$lvm"; then
-	lvremove -f "$(basename "$lvm")-$(date +%F-%0H-%0M)"
+	umount "$lvm"
+	lvremove -f "$source"
 fi
