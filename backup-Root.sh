@@ -12,10 +12,10 @@ Print-Usage(){
 if [ -f "$(which "$0").txt" ]; then
 	ExcludeFiles="$(which "$0").txt"
 fi
-BackupPath="/Data/Backup/Linux/NVMeRoot" #defines default BackupPath
-source=/
+BackupPath="/Data/Backup/Linux/NVMeRoot"	#defines default BackupPath
+source=/									#defines backup source
 
-while getopts ":p:e:f:l:" arg; do
+while getopts ":p:e:f:l:s:" arg; do
   case $arg in
     p)
       BackupPath=${OPTARG}
@@ -25,6 +25,9 @@ while getopts ":p:e:f:l:" arg; do
       ;;
     f)
       ExcludeFiles=${OPTARG}
+      ;;
+    s)
+      source=${OPTARG}
       ;;
 	l)
 	  lvmSource="$(df --output=source / | tail -1)"
@@ -61,4 +64,5 @@ rsync ${RemoteShell:+-e "$RemoteShell"} -i -ahxHAX --delete ${ExcludeFiles:+"--e
 if test "$lvm"; then
 	umount "$lvm"
 	lvremove -f "$source"
+	rm -d source
 fi
