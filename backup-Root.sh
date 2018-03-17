@@ -1,14 +1,35 @@
 #!/bin/bash
 #handle if variables RemoteShell and ExcludeFiles are unset
 
-if [ "$EUID" -ne 0 ]; then
+if test "$EUID" -ne 0; then
 	printf "Error: This script must be run as root\\n"
 	exit -1
 fi
+################### FUNCTION ###################
 Print-Usage(){
 	printf "Usage: %s [-p <BackupPath>] [-e <RemoteShell>] [-f <ExcludeFiles>]\\n" "$0"
 	exit 0
 }
+function trapped {
+	printf \\n
+	lvm_exit
+}
+function lvm_exit {
+	if test "$lvm"; then
+	  if mountpoint -q "$source"; then
+		umount "$source" || exit 1
+	  fi
+	  if test -b "$lvm_VG-${lvm_snap//-/--}"; then
+		lvremove -f "$(basename "$lvm_VG")/$lvm_snap" || exit 1
+	  fi
+	  if test -d "$source"; then
+		rm -d "$source"
+	  fi
+	  exit $1
+	fi
+}
+
+##################### VARS #####################
 if [ -f "$(which "$0").txt" ]; then
 	ExcludeFiles="$(which "$0").txt"
 fi
@@ -30,11 +51,7 @@ while getopts ":p:e:f:ls:" arg; do
       source=${OPTARG}
       ;;
 	l)
-	  lvm="$(df --output=source "$source" | tail -1)"	#e.g. /dev/mapper/ssd-root
-	  lvm_snap="$(basename "$lvm")"						#-> ssd-root
-	  lvm_VG="${lvm%%-*}"								#-> /dev/mapper/ssd
-	  lvm_snap="${lvm#*-}-snap-$(date +%F-%0H-%0M)"		#-> root-snap-d2018-03-16-13-31
-	  source="$(mktemp -d /media/temp.XXX)" || exit 1
+	  lvm="lvm"
 	  ;;
     \?)
       Print-Usage
@@ -42,35 +59,41 @@ while getopts ":p:e:f:ls:" arg; do
   esac
 done
 shift $((OPTIND-1))
+if test "$lvm"; then
+	lvm="$(df --output=source "$source" | tail -1)"	#e.g. /dev/mapper/ssd-root
+	lvm_snap="$(basename "$lvm")"					#-> ssd-root
+	lvm_VG="${lvm%%-*}"								#-> /dev/mapper/ssd
+	lvm_snap="${lvm#*-}-snap-$(date +%F-%0H-%0M)"	#-> root-snap-d2018-03-16-13-31
+	source="$(mktemp -d /media/temp.XXX)" && \
+	test "$lvm_snap" && test "$lvm_VG" || lvm_exit 1
+	trap lvm_exit INT
+fi
 
+###################### UI ######################
 if [ "$(df --output=source / | tail -1)" == "$(df --output=source "$BackupPath" | tail -1)" ]; then
 	printf "Warning: BackupPath (\"%s\") is on the same Filesystem as the Root Filesystem (\"/\")\\n" "$BackupPath"
 fi
-printf	"${lvm:+lvm mapping: \"$lvm\"\\n}\
-source = \"%s\"
-BackupPath = \"%s\"
-RemoteShell = \"%s\"
-ExcludeFiles = \"%s\"\\n" \
-"$source" "$BackupPath" "$RemoteShell" "$ExcludeFiles" >&2
-
+printf	"${lvm:+lvm mapping: \t$lvm\\n}\
+${lvm_snap:+lv snap: \t$(basename "$lvm_VG")/$lvm_snap\\n}\
+source: \t%s
+BackupPath: \t%s
+${RemoteShell:+RemoteShell: \t$RemoteShell\\n}\
+ExcludeFiles: \t%s\\n" \
+"$source" "$BackupPath" "$ExcludeFiles" >&2
 read -r -n 1 -p "Do you want to continue? [Y/n] " ans || { echo; exit; } && echo
 case "$ans" in
     [yY][eE][sS]|[yY]|"")
       ;;
     *)
-      if test "$lvm"; then
-		  rm -d "$source"
-	  fi
+      lvm_exit
       ;;
 esac
 
+##################### EXEC #####################
 if test "$lvm"; then
-	lvcreate -L 5G --snapshot -n "$lvm_snap" "$lvm" \
-	&& mount "$lvm_VG-${lvm_snap//-/--}" "$source" || exit 1
+	lvcreate -L 5G --snapshot -n "$lvm_snap" "$lvm" && \
+	mount "$lvm_VG-${lvm_snap//-/--}" "$source" || lvm_exit 1
 fi
-rsync ${RemoteShell:+-e "$RemoteShell"} -i -ahxHAX --delete ${ExcludeFiles:+"--exclude-from=$ExcludeFiles"} / "$BackupPath"/
-if test "$lvm"; then
-	umount "$source"
-	lvremove -f "$(basename "$lvm_VG")/$lvm_snap"
-	rm -d "$source"
-fi
+rsync ${RemoteShell:+-e "$RemoteShell"} -i -ahxHAX --delete ${ExcludeFiles:+"--exclude-from=$ExcludeFiles"} "$source"/ "$BackupPath"/
+lvm_exit
+
