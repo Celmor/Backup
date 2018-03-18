@@ -94,6 +94,6 @@ if test "$lvm"; then
 	lvcreate -L 5G --snapshot -n "$lvm_snap" "$lvm" && \
 	mount "$lvm_VG-${lvm_snap//-/--}" "$source" || lvm_exit 1
 fi
-rsync ${RemoteShell:+-e "$RemoteShell"} -i -ahxHAX --delete ${ExcludeFiles:+"--exclude-from=$ExcludeFiles"} "$source"/ "$BackupPath"/
+rsync ${RemoteShell:+-e "$RemoteShell"} -i -ahxHAX --delete --delete-excluded ${ExcludeFiles:+"--exclude-from=$ExcludeFiles"} "$source"/ "$BackupPath"/
 lvm_exit
 
