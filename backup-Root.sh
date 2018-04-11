@@ -7,7 +7,7 @@ if test "$EUID" -ne 0; then
 fi
 ################### FUNCTION ###################
 Print-Usage(){
-    printf "Usage: %s [-l] [-s source] [-p <BackupPath>] [-e <RemoteShell>] [-f <ExcludeFiles>] [-r <RsyncArgs>]\\n" "$0" >&2
+    printf "Usage: %s [-l] [-p <BackupPath>] [-e <RemoteShell>] [-f <ExcludeFiles>] [-r <RsyncArgs>] [-w WorkindDir] <source> ...\\n" "$0" >&2
     exit 0
 }
 function lvm_exit {
@@ -44,8 +44,8 @@ while getopts ":p:e:f:ls:" arg; do
     f)
       ExcludeFiles=${OPTARG}
       ;;
-    s)
-      source=${OPTARG}
+    w)
+      workdir=${OPTARG}
       ;;
     l)
       lvm="lvm"
@@ -59,15 +59,18 @@ while getopts ":p:e:f:ls:" arg; do
   esac
 done
 shift $((OPTIND-1))
+[ "$1" != "" ] && source=( "$@" )
 if test "$lvm"; then
-    lvm="$(df --output=source "$source" | tail -1)"    #e.g. /dev/mapper/ssd-root
+    source="$(mktemp -d /media/temp.XXX)" && \
+    for s in "{source[@]}"; then
+    lvm="$(df --output=source "$s" | tail -1)"    #e.g. /dev/mapper/ssd-root
     if [ "/dev/mapper" != "$(dirname "$lvm")" ]; then
-        printf "Source isn't a filesystem on a logical volume" >&2
+        printf "Source isn't a filesystem on a logical volume: %s\\n" "$s" >&2 && \
+        exit 2
     fi
     lvm_snap="$(basename "$lvm")"                    #-> ssd-root
     lvm_VG="${lvm%%-*}"                                #-> /dev/mapper/ssd
-    lvm_snap="${lvm#*-}-snap-$(date +%F-%0H-%0M)"    #-> root-snap-2018-03-16-13-31
-    source="$(mktemp -d /media/temp.XXX)" && \
+    lvm_snap="${lvm#*-}-snap-$(date +%F-%0H-%0M)"    #-> root-snap-2018-03-16-13-31 && \
     test "$lvm_snap" && test "$lvm_VG" || lvm_exit 1
     trap lvm_exit INT
 fi
@@ -97,6 +100,6 @@ if test "$lvm"; then
     lvcreate -L 5G --snapshot -n "$lvm_snap" "$lvm" && \
     mount "$lvm_VG-${lvm_snap//-/--}" "$source" || lvm_exit 1
 fi
-rsync ${RemoteShell:+-e "$RemoteShell"} -i --stats -ahHAX --delete ${ExcludeFiles:+"--exclude-from=$ExcludeFiles"} "$source"/ "$BackupPath"/
+rsync ${RemoteShell:+-e "$RemoteShell"} -i --stats -ahHAX --delete ${ExcludeFiles:+"--exclude-from=$ExcludeFiles"} "$(printf '%s/ ' "${source[@]}")" "$BackupPath"/
 lvm_exit
 
